@@ -1,0 +1,17 @@
+{
+    "id": "hueLights",
+    "name": "Hue Lights",
+    "description": "Control your Philips Hue lights",
+    "version": "0.0.1",
+    "author": "Willem640",
+    "type": "widget",
+    "capabilities": ["dankbar-widget"],
+    "icon": "light_group",
+    "firstParty": false,
+    "component": "./HueLightsWidget.qml",
+    "settings": "./HueLightsSettings.qml",
+    "permissions": [
+        "settings_read",
+        "settings_write"
+    ]
+}
