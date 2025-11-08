@@ -1,6 +1,5 @@
 ## A plugin to control Hue Lights in DankMaterialShell
-Inspired by [the Gnome smart home plugin](https://github.com/vchlum/smart-home)
-I am still testing some parts of it, but I'm planning to release it to the DMS plugin registry soon. 
+Inspired by [the Gnome smart home plugin](https://github.com/vchlum/smart-home). I am still testing some parts of it, but I'm planning to release it to the DMS plugin registry soon. 
 
 Currently, only Hue lights are supported through [openhue-cli](https://github.com/openhue/openhue-cli). To use the plugin, first install `openhue-cli` and set it up to connect to your bridge:
 ```sh
