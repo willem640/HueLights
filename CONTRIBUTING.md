@@ -1,5 +1,5 @@
 ## Adding a new light integration
-The first step is to create a new JavaScript file defining your integration. A light integration should provide an update function according to the following schema:
+The first step is to create a new JavaScript file defining your integration. A light integration should provide an update function like this one:
 ```js
 // yourIntegration.js
 getYourIntegrationData(pluginData, completionHandler) {
