@@ -1,201 +1,98 @@
 import QtQuick
+import QtQuick.Controls
+import QtQuick.Layouts
 import Quickshell
 import qs.Common
 import qs.Services
 import qs.Widgets
 import qs.Modules.Plugins
+import "Hue.js" as Hue
+
+// TODO: 
+//x refactor hue functions,
+//x change rooms to array, also in hue
+//x add settings,
+//x room slider,
+//- add enable/disable services to getdata
+//x color temp,
+//x save opened/closed state
+// actual hue integration,
+// icons
+//x make rooms PluginGlobalVar
+// per-room open tab tracking?
+// buggy behavior of list view when closing the lights tab when it is out of view
 
 PluginComponent {
     id: root
 
-    property int workDuration: pluginData.workDuration || 25
-    property int shortBreakDuration: pluginData.shortBreakDuration || 5
-    property int longBreakDuration: pluginData.longBreakDuration || 15
-    property bool autoStartBreaks: pluginData.autoStartBreaks ?? false
-    property bool autoStartPomodoros: pluginData.autoStartPomodoros ?? false
+	PluginGlobalVar {
+		id: globalRooms
+		varName: "rooms"
+		defaultValue: []
+	}
 
-    PluginGlobalVar {
-        id: globalRemainingSeconds
-        varName: "remainingSeconds"
-        defaultValue: 0
-    }
+	property var currentlyOpenDropdown 
 
-    PluginGlobalVar {
-        id: globalTotalSeconds
-        varName: "totalSeconds"
-        defaultValue: 0
-    }
+    function updateRoomsData() {
+		// TODO fix settings when possible
+		/*
+		var services = {
+			"openhue-cli:enable": Hue.getHueData
+		}
 
-    PluginGlobalVar {
-        id: globalIsRunning
-        varName: "isRunning"
-        defaultValue: false
-    }
+        var updateFunctions = [];
 
-    PluginGlobalVar {
-        id: globalTimerState
-        varName: "timerState"
-        defaultValue: "work"
-    }
+		for (var serviceSettingName in services) {
+			if (pluginData[serviceSettingName] === true) {
+				updateFunctions.push(services[serviceSettingName])
+			}
+		}*/
 
-    PluginGlobalVar {
-        id: globalCompletedPomodoros
-        varName: "completedPomodoros"
-        defaultValue: 0
-    }
+		// Settings do not appear to be working for me at the moment, so I don't implement them for now.
+		
+		var updateFunctions = [
+			Hue.getHueData
+		];
 
-    PluginGlobalVar {
-        id: globalTimerOwnerId
-        varName: "timerOwnerId"
-        defaultValue: ""
-    }
+		var allUpdatedRooms = [];
 
-    property string instanceId: Math.random().toString(36).substring(2)
-
-    Timer {
-        id: pomodoroTimer
-        interval: 1000
-        repeat: true
-        running: globalIsRunning.value && globalTimerOwnerId.value === root.instanceId
-        onTriggered: {
-            if (globalRemainingSeconds.value > 0) {
-                globalRemainingSeconds.set(globalRemainingSeconds.value - 1)
-            } else {
-                root.timerComplete()
-            }
+        for (var i = 0; i < updateFunctions.length; i++) {
+			var updatedRooms = updateFunctions[i](pluginData, (updatedRooms) => {
+				for (var updatedIdx = 0; updatedIdx < updatedRooms.length; updatedIdx++) {
+					var foundRoomInOldList = false;
+					for (var oldRoomIdx = 0; oldRoomIdx < globalRooms.value.length; oldRoomIdx++) {
+						if (globalRooms.value[oldRoomIdx].id == updatedRooms[updatedIdx].id) {
+							globalRooms.value[oldRoomIdx] = updatedRooms[updatedIdx];
+							foundRoomInOldList = true;
+							break;
+						}
+					}
+					if (!foundRoomInOldList) {
+						globalRooms.value.push(updatedRooms[updatedIdx]);
+					}
+				}
+	
+				// TODO is a data race possible with multiple sources?
+				// force an update
+				globalRooms.set([...globalRooms.value]);
+			}
+		);
         }
-    }
 
-    function timerComplete() {
-        globalIsRunning.set(false)
-
-        if (globalTimerState.value === "work") {
-            globalCompletedPomodoros.set(globalCompletedPomodoros.value + 1)
-            const isLongBreak = globalCompletedPomodoros.value % 4 === 0
-
-            Quickshell.execDetached(["sh", "-c", "notify-send 'Pomodoro Complete' 'Time for a " + (isLongBreak ? "long" : "short") + " break!' -u normal"])
-
-            if (isLongBreak) {
-                root.startLongBreak(root.autoStartBreaks)
-            } else {
-                root.startShortBreak(root.autoStartBreaks)
-            }
-        } else {
-            Quickshell.execDetached(["sh", "-c", "notify-send 'Break Complete' 'Ready for another pomodoro?' -u normal"])
-            root.startWork(root.autoStartPomodoros)
-        }
-    }
-
-    function startWork(autoStart) {
-        globalTimerState.set("work")
-        globalTotalSeconds.set(root.workDuration * 60)
-        globalRemainingSeconds.set(globalTotalSeconds.value)
-        if (autoStart) {
-            globalTimerOwnerId.set(root.instanceId)
-        }
-        globalIsRunning.set(autoStart ?? false)
-    }
-
-    function startShortBreak(autoStart) {
-        globalTimerState.set("shortBreak")
-        globalTotalSeconds.set(root.shortBreakDuration * 60)
-        globalRemainingSeconds.set(globalTotalSeconds.value)
-        if (autoStart) {
-            globalTimerOwnerId.set(root.instanceId)
-        }
-        globalIsRunning.set(autoStart ?? false)
-    }
-
-    function startLongBreak(autoStart) {
-        globalTimerState.set("longBreak")
-        globalTotalSeconds.set(root.longBreakDuration * 60)
-        globalRemainingSeconds.set(globalTotalSeconds.value)
-        if (autoStart) {
-            globalTimerOwnerId.set(root.instanceId)
-        }
-        globalIsRunning.set(autoStart ?? false)
-    }
-
-    function toggleTimer() {
-        if (!globalIsRunning.value) {
-            globalTimerOwnerId.set(root.instanceId)
-        }
-        globalIsRunning.set(!globalIsRunning.value)
-    }
-
-    function resetTimer() {
-        globalIsRunning.set(false)
-        globalRemainingSeconds.set(globalTotalSeconds.value)
-    }
-
-    function formatTime(seconds, isVertical = false) {
-        const mins = Math.floor(seconds / 60)
-        const secs = seconds % 60
-        return isVertical ? mins + "\n" + (secs < 10 ? "0" : "") + secs : mins + " " + (secs < 10 ? "0" : "") + secs
-    }
-
-    function getStateColor() {
-        if (globalTimerState.value === "work") return Theme.primary
-        if (globalTimerState.value === "shortBreak") return Theme.success
-        return Theme.warning
-    }
-
-    function getStateIcon() {
-        if (globalTimerState.value === "work") return "work"
-        return "coffee"
-    }
-
-    Timer {
-        id: initTimer
-        interval: 100
-        repeat: false
-        running: true
-        onTriggered: {
-            if (globalRemainingSeconds.value === 0 && globalTotalSeconds.value === 0) {
-                startWork(false)
-            }
-        }
+        //globalRooms.set(allUpdatedRooms);
     }
 
     horizontalBarPill: Component {
-        Row {
-            spacing: Theme.spacingXS
-
-            DankIcon {
-                name: root.getStateIcon()
-                size: Theme.iconSize - 6
-                color: root.getStateColor()
-                anchors.verticalCenter: parent.verticalCenter
-            }
-
-            StyledText {
-                text: root.formatTime(globalRemainingSeconds.value)
-                font.pixelSize: Theme.fontSizeSmall
-                font.weight: Font.Medium
-                color: Theme.surfaceVariantText
-                anchors.verticalCenter: parent.verticalCenter
-            }
+        DankIcon {
+            name: "lightbulb_2"
+            size: Theme.iconSize - 6
         }
     }
 
     verticalBarPill: Component {
-        Column {
-            spacing: Theme.spacingXS
-
-            DankIcon {
-                name: root.getStateIcon()
-                size: Theme.iconSize - 6
-                color: root.getStateColor()
-                anchors.horizontalCenter: parent.horizontalCenter
-            }
-
-            StyledText {
-                text: root.formatTime(globalRemainingSeconds.value, true)
-                font.pixelSize: Theme.fontSizeSmall
-                font.weight: Font.Medium
-                color: Theme.surfaceVariantText
-                anchors.horizontalCenter: parent.horizontalCenter
-            }
+        DankIcon {
+            name: "lightbulb_2"
+            size: Theme.iconSize - 6
         }
     }
 
@@ -203,211 +100,455 @@ PluginComponent {
         PopoutComponent {
             id: popout
 
-            headerText: "Pomodoro Timer"
-            detailsText: {
-                if (globalTimerState.value === "work") return "Focus session • " + globalCompletedPomodoros.value + " completed"
-                if (globalTimerState.value === "shortBreak") return "Short break"
-                return "Long break"
-            }
+            Component.onCompleted: () => updateRoomsData();
+
+            headerText: "Hue lights"
+
             showCloseButton: true
 
             Column {
                 id: popoutContentColumn
                 width: parent.width
                 spacing: Theme.spacingM
-
-                Item {
+                DankListView {
+                    id: roomsListView
                     width: parent.width
-                    height: 180
+                    height: 400
+					spacing: Theme.spacingL
+					clip: true
+                    model: globalRooms.value.map(thisRoom => {
+                        return {
+                            room: thisRoom
+                        };
+                    })
+					delegate: RoomView {
+						width: popoutContentColumn.width
+						required property int index
+						roomIndex: index
+					}
+                }
+            }
+        }
+    }
 
-                    Rectangle {
-                        width: 180
-                        height: 180
-                        radius: 90
-                        anchors.centerIn: parent
-                        color: "transparent"
-                        border.width: 8
-                        border.color: Qt.rgba(root.getStateColor().r, root.getStateColor().g, root.getStateColor().b, 0.2)
+    property int lightSliderHeight: 60
 
-                        Canvas {
-                            id: progressCanvas
-                            width: parent.width - 16
-                            height: parent.height - 16
-                            anchors.centerIn: parent
+    component RoomView: Column {
+		id: roomView
+        required property int roomIndex
+		required property var room
+        width: parent.width
+        spacing: Theme.spacingS
 
-                            onPaint: {
-                                var ctx = getContext("2d")
-                                ctx.clearRect(0, 0, width, height)
-                                ctx.lineWidth = 8
-                                ctx.strokeStyle = root.getStateColor()
-                                ctx.beginPath()
-                                const centerX = width / 2
-                                const centerY = height / 2
-                                const radius = (width - 8) / 2
-                                const progress = globalRemainingSeconds.value / globalTotalSeconds.value
-                                const startAngle = -Math.PI / 2
-                                const endAngle = startAngle + (2 * Math.PI * progress)
-                                ctx.arc(centerX, centerY, radius, startAngle, endAngle, false)
-                                ctx.stroke()
-                            }
+		LightSliderWithSwitch {
+			lightOrRoom: roomView.room
+			roomIndex: roomView.roomIndex
+			isRoom: true
+			labelFontSize: Theme.fontSizeLarge
+		}
 
-                            Connections {
-                                target: globalRemainingSeconds
-                                function onValueChanged() {
-                                    progressCanvas.requestPaint()
-                                }
-                            }
-                        }
+        LightsView {
+            room: roomView.room
+            roomIndex: roomView.roomIndex
+        }
 
-                        Column {
-                            anchors.centerIn: parent
-                            spacing: Theme.spacingXS
+        SceneView {
+			room: roomView.room
+		}
 
-                            StyledText {
-                                text: root.formatTime(globalRemainingSeconds.value)
-                                font.pixelSize: 36
-                                font.weight: Font.Bold
-                                color: root.getStateColor()
-                                anchors.horizontalCenter: parent.horizontalCenter
-                                horizontalAlignment: Text.AlignHCenter
-                                width: 120
-                            }
+		RoomColorTemperatureView {
+			room: roomView.room
+		}
+    }
 
-                            StyledText {
-                                text: {
-                                    if (globalTimerState.value === "work") return "Work"
-                                    if (globalTimerState.value === "shortBreak") return "Short Break"
-                                    return "Long Break"
-                                }
-                                font.pixelSize: Theme.fontSizeMedium
-                                color: Theme.surfaceVariantText
-                                anchors.horizontalCenter: parent.horizontalCenter
-                            }
+    component OpenableDropdown: Item {
+        id: openableDropdown
+        property int closedHeight: 0
+        property bool isOpened: true
+        clip: true
+
+        // https://stackoverflow.com/questions/12333112/qml-animations-visible-property-changes
+        states: [
+            State {
+                when: openableDropdown.isOpened
+                name: "Open"
+                PropertyChanges {
+                    openableDropdown {
+                        height: openableDropdown.childrenRect.height
+                    }
+                }
+            },
+            State {
+                when: !openableDropdown.isOpened
+                name: "Closed"
+                PropertyChanges {
+                    openableDropdown {
+                        height: openableDropdown.closedHeight
+                    }
+                }
+            }
+        ]
+
+        transitions: [
+            Transition {
+                from: "Open"
+                to: "Closed"
+
+                NumberAnimation {
+                    target: openableDropdown
+                    property: "height"
+                    duration: 200
+                    easing.type: Easing.InQuad
+                }
+            },
+            Transition {
+                from: "Closed"
+                to: "Open"
+                NumberAnimation {
+                    target: openableDropdown
+                    property: "height"
+                    duration: 200
+                    easing.type: Easing.OutQuad
+                }
+            }
+        ]
+    }
+
+    component DropDownHeader: Item {
+        id: dropDownHeader
+        required property string iconName
+        required property string text
+        signal clicked(var mouseEvent)
+
+        RowLayout {
+            id: dropDownHeaderRowLayout
+            spacing: Theme.spacingM
+            width: parent.width
+            DankIcon {
+                id: dropDownIcon
+                Layout.fillWidth: true
+                Layout.horizontalStretchFactor: 1
+                Layout.leftMargin: Theme.spacingS
+                name: dropDownHeader.iconName
+                size: Theme.iconSize
+            }
+            StyledText {
+                Layout.fillWidth: true
+                Layout.horizontalStretchFactor: 8
+                verticalAlignment: Text.AlignVCenter
+                text: dropDownHeader.text
+                font.pixelSize: Theme.fontSizeLarge
+                color: Theme.surfaceText
+            }
+        }
+        MouseArea {
+            id: dropDownHeaderMouseArea
+            anchors.fill: dropDownHeader
+            hoverEnabled: true
+            cursorShape: Qt.PointingHandCursor
+            onClicked: event => dropDownHeader.clicked(event)
+        }
+    }
+
+    component LightsView: StyledRect {
+        id: lightsViewRect
+        required property var room
+        required property int roomIndex
+
+        width: parent.width
+        height: childrenRect.height
+        color: Theme.surfaceContainerHigh
+
+        OpenableDropdown {
+            id: lightsViewOpenableDropdown
+            width: parent.width
+            height: childrenRect.height
+            closedHeight: lightsViewHeader.height + Theme.spacingL
+			isOpened: root.currentlyOpenDropdown == room.id + "-lightsViewOpenableDropdown"
+			// Need to do string comparison because objects are regenerated every time the popout is opened
+            ColumnLayout {
+                id: lightsViewColumnLayout
+                width: parent.width
+                DropDownHeader {
+                    id: lightsViewHeader
+                    iconName: room.iconName
+                    text: room.name + " lights"
+					onClicked: {
+						if (lightsViewOpenableDropdown.isOpened) {
+							root.currentlyOpenDropdown = undefined
+						} else {
+							root.currentlyOpenDropdown = room.id + "-lightsViewOpenableDropdown"
+						}
+					}
+                    Layout.fillWidth: true
+                    Layout.topMargin: Theme.spacingS
+                    Layout.bottomMargin: Theme.spacingS
+                    Layout.preferredHeight: childrenRect.height
+                }
+
+                ColumnLayout {
+                    id: lightsListColumnLayout
+                    Layout.bottomMargin: Theme.spacingS
+                    Repeater {
+                        model: room.lights !== undefined ? room.lights.map(light => {
+                            return {
+                                lightOrRoom: light
+                            };
+                        }) : []
+                        delegate: LightSliderWithSwitch {
+                            required property int index
+                            roomIndex: lightsViewRect.roomIndex
+                            lightIndex: index
+                            color: Theme.surfaceContainerHighest
+                            Layout.leftMargin: Theme.spacingS
+                            Layout.rightMargin: Theme.spacingS
+                            Layout.fillWidth: true
                         }
                     }
                 }
+            }
+        }
+    }
 
-                Row {
-                    anchors.horizontalCenter: parent.horizontalCenter
-                    spacing: Theme.spacingM
+    component SceneView: StyledRect {
+        id: sceneViewRect
+        required property var room
 
-                    Rectangle {
-                        width: 64
-                        height: 64
-                        radius: 32
-                        color: playArea.containsMouse ? Qt.rgba(root.getStateColor().r, root.getStateColor().g, root.getStateColor().b, 0.2) : "transparent"
+        width: parent.width
+        height: childrenRect.height
+        color: Theme.surfaceContainerHigh
 
-                        DankIcon {
-                            anchors.centerIn: parent
-                            name: globalIsRunning.value ? "pause" : "play_arrow"
-                            size: 32
-                            color: root.getStateColor()
-                        }
+        OpenableDropdown {
+            id: sceneViewOpenableDropdown
+            width: parent.width
+            height: childrenRect.height
+            closedHeight: sceneViewHeader.height + Theme.spacingL
+			isOpened: root.currentlyOpenDropdown == room.id + "-sceneViewOpenableDropdown"
+            ColumnLayout {
+                id: sceneViewColumnLayout
+                width: parent.width
+                DropDownHeader {
+                    id: sceneViewHeader
+                    iconName: "scene"
+                    text: room.name + " scenes"
+					onClicked: {
+						if (sceneViewOpenableDropdown.isOpened) {
+							root.currentlyOpenDropdown = undefined
+						} else {
+							root.currentlyOpenDropdown = room.id + "-sceneViewOpenableDropdown"
+						}
+					}
+                    Layout.fillWidth: true
+                    Layout.topMargin: Theme.spacingS
+                    Layout.bottomMargin: Theme.spacingS
+                    Layout.preferredHeight: childrenRect.height
+                }
 
-                        MouseArea {
-                            id: playArea
-                            anchors.fill: parent
-                            hoverEnabled: true
-                            cursorShape: Qt.PointingHandCursor
-                            onClicked: root.toggleTimer()
-                        }
-                    }
-
-                    Rectangle {
-                        width: 64
-                        height: 64
-                        radius: 32
-                        color: resetArea.containsMouse ? Theme.surfaceContainerHighest : "transparent"
-
-                        DankIcon {
-                            anchors.centerIn: parent
-                            name: "refresh"
-                            size: 24
-                            color: Theme.surfaceText
-                        }
-
-                        MouseArea {
-                            id: resetArea
-                            anchors.fill: parent
-                            hoverEnabled: true
-                            cursorShape: Qt.PointingHandCursor
-                            onClicked: root.resetTimer()
+                ColumnLayout {
+                    id: sceneListColumnLayout
+                    Layout.bottomMargin: Theme.spacingS
+                    Repeater {
+                        model: room.scenes.map(scene => {
+                            return {
+                                scene: scene
+                            };
+                        })
+                        delegate: SceneViewSingle {
+                            Layout.leftMargin: Theme.spacingS
+                            Layout.rightMargin: Theme.spacingS
+                            Layout.fillWidth: true
                         }
                     }
                 }
+            }
+        }
+    }
 
-                Column {
-                    width: parent.width
-                    spacing: Theme.spacingS
+    component SceneViewSingle: StyledRect {
+        id: sceneRect
+        required property var scene
+        width: parent.width
+        height: 40
+        color: sceneArea.containsMouse ? Theme.surfaceContainerHighest : "transparent"
+        radius: Theme.cornerRadius
 
-                    StyledText {
-                        text: "Quick Actions"
-                        font.pixelSize: Theme.fontSizeSmall
-                        color: Theme.surfaceVariantText
-                    }
+        StyledText {
+            anchors.fill: parent
+            horizontalAlignment: Text.AlignHCenter
+            verticalAlignment: Text.AlignVCenter
+            text: scene.name
+            font.pixelSize: Theme.fontSizeMedium
+            color: Theme.surfaceText
+        }
 
-                    Row {
-                        width: parent.width
-                        spacing: Theme.spacingS
+        MouseArea {
+            id: sceneArea
+            anchors.fill: parent
+            hoverEnabled: true
+            cursorShape: Qt.PointingHandCursor
+			onClicked: {
+				scene.enable() 
+			}
+        }
+    }
 
-                        DankButton {
-                            text: "Work"
-                            iconName: "work"
-                            onClicked: root.startWork(false)
-                        }
+    component LightSliderWithSwitch: StyledRect {
+		id: lightSliderWithSwitchRect
+        required property var lightOrRoom
+        property int roomIndex
+        property int lightIndex
+		property bool isRoom: false // only used when updating the global rooms variable, rest of the functionality is the same because room and light methods are the same
 
-                        DankButton {
-                            text: "Short Break"
-                            iconName: "coffee"
-                            onClicked: root.startShortBreak(false)
-                        }
+		property int labelFontSize: Theme.fontSizeMedium
 
-                        DankButton {
-                            text: "Long Break"
-                            iconName: "weekend"
-                            onClicked: root.startLongBreak(false)
-                        }
+        width: parent.width
+        radius: Theme.cornerRadius
+        color: Theme.surfaceContainerHigh
+        height: lightSliderHeight
+
+        RowLayout {
+            spacing: Theme.spacingM
+            anchors.fill: parent
+            DankIcon {
+                id: lightIcon
+                Layout.fillWidth: true
+                Layout.horizontalStretchFactor: 1
+                Layout.leftMargin: 8
+                name: lightOrRoom.iconName
+                size: Theme.iconSize
+            }
+            ColumnLayout {
+                Layout.fillWidth: true
+                Layout.horizontalStretchFactor: 8
+                StyledText {
+                    Layout.fillWidth: true
+                    Layout.fillHeight: true
+                    Layout.topMargin: Theme.spacingM 
+                    verticalAlignment: Text.AlignVCenter
+                    text: lightOrRoom.name
+					font.pixelSize: lightSliderWithSwitchRect.labelFontSize
+					color: Theme.surfaceText
+                }
+                DankSlider {
+                    id: lightSlider
+                    Layout.fillWidth: true
+                    Layout.bottomMargin: Theme.spacingXS
+                    Layout.fillHeight: true
+                    minimum: 1
+                    maximum: 100
+                    value: lightOrRoom.brightness
+                    wheelEnabled: false // doesn't work with onSliderDragFinished
+                    onSliderDragFinished: finalValue => {
+                        lightOrRoom.setBrightness(finalValue);
+						if (roomIndex !== undefined && lightIndex !== undefined) {
+                        	globalRooms.value[roomIndex].lights[lightIndex].brightness = finalValue;
+						} else if (roomIndex !== undefined && isRoom) {
+							globalRooms.value[roomIndex].brightness = finalValue
+						}
                     }
                 }
+            }
+            Item {
+                Layout.fillWidth: true
+                Layout.minimumWidth: lightToggle.width
+                Layout.horizontalStretchFactor: 1
+                Layout.rightMargin: 5
 
-                StyledRect {
-                    width: parent.width
-                    height: statsColumn.implicitHeight + Theme.spacingM * 2
-                    radius: Theme.cornerRadius
-                    color: Theme.surfaceContainerHigh
-
-                    Column {
-                        id: statsColumn
-                        anchors.fill: parent
-                        anchors.margins: Theme.spacingM
-                        spacing: Theme.spacingXS
-
-                        Row {
-                            spacing: Theme.spacingM
-
-                            DankIcon {
-                                name: "check_circle"
-                                size: Theme.iconSize
-                                color: Theme.primary
-                                anchors.verticalCenter: parent.verticalCenter
-                            }
-
-                            StyledText {
-                                text: globalCompletedPomodoros.value + " pomodoros completed"
-                                font.pixelSize: Theme.fontSizeMedium
-                                color: Theme.surfaceText
-                                anchors.verticalCenter: parent.verticalCenter
-                            }
-                        }
-
-                        StyledText {
-                            text: "Next long break after " + (4 - (globalCompletedPomodoros.value % 4)) + " more"
-                            font.pixelSize: Theme.fontSizeSmall
-                            color: Theme.surfaceVariantText
-                            leftPadding: Theme.iconSize + Theme.spacingM
-                        }
+                DankToggle {
+                    id: lightToggle
+                    anchors.centerIn: parent
+                    //width: parent.width * 0.3
+                    checked: lightOrRoom.on
+                    onToggleCompleted: state => {
+                        lightOrRoom.turnOnOff(state);
+						if (roomIndex !== undefined && lightIndex !== undefined) {
+							globalRooms.value[roomIndex].lights[lightIndex].on = state;
+						} else if (roomIndex !== undefined && isRoom) {
+							globalRooms.value[roomIndex].on = state
+						}
                     }
                 }
+            }
+        }
+    }
+
+
+	component RoomColorTemperatureView: StyledRect {
+        id: roomColorTemperatureViewRect
+        required property var room
+
+        width: parent.width
+        height: childrenRect.height
+        color: Theme.surfaceContainerHigh
+
+        OpenableDropdown {
+            id: roomColorTemperatureViewOpenableDropdown
+            width: parent.width
+            height: childrenRect.height
+            closedHeight: roomColorTemperatureViewHeader.height + Theme.spacingL
+			isOpened: root.currentlyOpenDropdown == room.id + "-roomColorTemperatureViewOpenableDropdown"
+            ColumnLayout {
+                id: roomColorTemperatureViewColumnLayout
+                width: parent.width
+                DropDownHeader {
+                    id: roomColorTemperatureViewHeader
+                    iconName: "thermometer"
+                    text: room.name + " color temperature"
+					onClicked: {
+						if (roomColorTemperatureViewOpenableDropdown.isOpened) {
+							root.currentlyOpenDropdown = undefined
+						} else {
+							root.currentlyOpenDropdown = room.id + "-roomColorTemperatureViewOpenableDropdown"
+						}
+					}
+                    Layout.fillWidth: true
+                    Layout.topMargin: Theme.spacingS
+					Layout.bottomMargin: Theme.spacingS
+                    Layout.preferredHeight: childrenRect.height
+                }
+
+
+				Item {
+					// surround in Item so MouseArea does not get rounded corners
+					id: colorTempItem
+					Layout.fillWidth: true
+					Layout.leftMargin: Theme.spacingL
+					Layout.rightMargin: Theme.spacingL
+					Layout.bottomMargin: Theme.spacingL
+					Layout.preferredHeight: 2 * Theme.cornerRadius
+
+					StyledRect {
+						id: colorTempGradient
+						anchors.fill: parent
+					
+						gradient: Gradient {
+								orientation: Gradient.Horizontal
+								GradientStop { position: 0.0; color: "#FF890E" }
+								GradientStop { position: 1.0; color: "#FFFFFB"}
+						}
+						
+					
+					}
+					MouseArea {
+						anchors.fill: parent
+						hoverEnabled: true
+						cursorShape: Qt.PointingHandCursor
+						onClicked: event => {
+							const percent = event.x / this.width
+							const graceArea = 0.05
+							var percentAdjusted = percent / (1 - 2 * graceArea) - graceArea
+							// consider first and last 5% to mean minimum and maximum temerature, otherwise setting the lowest value is difficult
+							if (percentAdjusted < 0) {
+								percentAdjusted = 0
+							} else if (percentAdjusted > 1) {
+								percentAdjusted = 1
+							}
+							room.setColorTemperature(1 - percentAdjusted)
+						}
+					}
+				}
+
+
             }
         }
     }
