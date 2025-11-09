@@ -40,7 +40,11 @@ function openHueCliCommand(args) {
 function getOpenHueCli() {
 	// TODO read setting for openhue-cli path
 	// globalPluginData
-	return "openhue-cli";
+	if (globalPluginData !== undefined && globalPluginData['openhue-cli:path'] !== undefined) {
+		return globalPluginData['openhue-cli:path'];
+	} else {
+		return "openhue-cli";
+	}
 }
 
 function getHueRoomIcon(hueName) {

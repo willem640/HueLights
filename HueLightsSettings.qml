@@ -17,15 +17,6 @@ PluginSettings {
         color: Theme.surfaceText
     }
 
-	// TODO remove this notice when the settings do work again
-    StyledText {
-        width: parent.width
-        text: "Note, these do not function for the moment"
-        font.pixelSize: Theme.fontSizeLarge
-        font.weight: Font.Bold
-        color: Theme.surfaceText
-    }
-
     StyledText {
         width: parent.width
         text: "Configure enabled light services"

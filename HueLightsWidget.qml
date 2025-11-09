@@ -34,8 +34,6 @@ PluginComponent {
 	property var currentlyOpenDropdown 
 
     function updateRoomsData() {
-		// TODO fix settings when possible
-		/*
 		var services = {
 			"openhue-cli:enable": Hue.getHueData
 		}
@@ -46,13 +44,7 @@ PluginComponent {
 			if (pluginData[serviceSettingName] === true) {
 				updateFunctions.push(services[serviceSettingName])
 			}
-		}*/
-
-		// Settings do not appear to be working for me at the moment, so I don't implement them for now.
-		
-		var updateFunctions = [
-			Hue.getHueData
-		];
+		}
 
 		var allUpdatedRooms = [];
 
