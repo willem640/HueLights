@@ -21,6 +21,14 @@ import "Hue.js" as Hue
 //x make rooms PluginGlobalVar
 // per-room open tab tracking?
 // buggy behavior of list view when closing the lights tab when it is out of view
+// add screenshots to readme
+// optional scene/color temp view?
+// remove empty rooms?
+// Fix crash on empty room
+// Color picker for RGB lights
+// Timer for data refresh
+// room brightness is not saved until refresh
+// sort scenes
 
 PluginComponent {
     id: root
