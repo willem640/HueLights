@@ -9,16 +9,8 @@ import qs.Modules.Plugins
 import "Hue.js" as Hue
 
 // TODO: 
-//x refactor hue functions,
-//x change rooms to array, also in hue
-//x add settings,
-//x room slider,
-//- add enable/disable services to getdata
-//x color temp,
-//x save opened/closed state
 // actual hue integration,
 // icons
-//x make rooms PluginGlobalVar
 // per-room open tab tracking?
 // buggy behavior of list view when closing the lights tab when it is out of view
 // add screenshots to readme
@@ -29,6 +21,7 @@ import "Hue.js" as Hue
 // Timer for data refresh
 // room brightness is not saved until refresh
 // sort scenes
+// per light temp/color?
 
 PluginComponent {
     id: root
@@ -39,6 +32,11 @@ PluginComponent {
 		defaultValue: []
 	}
 
+	Timer {
+		id: refreshTimer
+		interval: 800
+		onTriggered: root.updateRoomsData()
+	}
 	property var currentlyOpenDropdown 
 
     function updateRoomsData() {
@@ -81,6 +79,12 @@ PluginComponent {
 
         //globalRooms.set(allUpdatedRooms);
     }
+
+	function delayedUpdate() {
+		//Quickshell.execDetached(["sh", "-c", "notify-send 'kaas'"]);
+		refreshTimer.restart()
+
+	}
 
     horizontalBarPill: Component {
         DankIcon {
@@ -388,6 +392,7 @@ PluginComponent {
             cursorShape: Qt.PointingHandCursor
 			onClicked: {
 				scene.enable() 
+				root.delayedUpdate()
 			}
         }
     }
@@ -445,6 +450,8 @@ PluginComponent {
 						} else if (roomIndex !== undefined && isRoom) {
 							globalRooms.value[roomIndex].brightness = finalValue
 						}
+
+						root.delayedUpdate()
                     }
                 }
             }
@@ -466,6 +473,8 @@ PluginComponent {
 						} else if (roomIndex !== undefined && isRoom) {
 							globalRooms.value[roomIndex].on = state
 						}
+
+						root.delayedUpdate()
                     }
                 }
             }
@@ -500,6 +509,8 @@ PluginComponent {
 						} else {
 							root.currentlyOpenDropdown = room.id + "-roomColorTemperatureViewOpenableDropdown"
 						}
+
+						root.delayedUpdate()
 					}
                     Layout.fillWidth: true
                     Layout.topMargin: Theme.spacingS
