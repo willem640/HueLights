@@ -425,15 +425,47 @@ PluginComponent {
             ColumnLayout {
                 Layout.fillWidth: true
                 Layout.horizontalStretchFactor: 8
-                StyledText {
-                    Layout.fillWidth: true
-                    Layout.fillHeight: true
-                    Layout.topMargin: Theme.spacingM 
-                    verticalAlignment: Text.AlignVCenter
-                    text: lightOrRoom.name
-					font.pixelSize: lightSliderWithSwitchRect.labelFontSize
-					color: Theme.surfaceText
-                }
+				RowLayout {
+					Layout.fillWidth: true
+					Layout.fillHeight: true
+					StyledText {
+						Layout.topMargin: Theme.spacingM 
+						Layout.fillWidth: true
+						Layout.fillHeight: true
+						verticalAlignment: Text.AlignVCenter
+						text: lightOrRoom.name
+						font.pixelSize: lightSliderWithSwitchRect.labelFontSize
+						color: Theme.surfaceText
+					}
+					ClickableIcon {
+						Layout.topMargin: Theme.spacingM
+						iconName: "thermometer"
+						size: Theme.iconSize - 8
+						radius: 0
+						color: "transparent"
+						selectedColor: Theme.surfaceContainerHighest * 1.1 
+						Layout.fillHeight: true
+						Layout.preferredWidth: height
+					}
+					ClickableIcon {
+						Layout.topMargin: Theme.spacingM
+						iconName: "palette"
+						size: Theme.iconSize - 8
+						radius: 0
+						color: "transparent"
+						selectedColor: Theme.surfaceContainerHighest * 1.1 
+						Layout.fillHeight: true
+						Layout.preferredWidth: height
+						onClicked: {
+							if (PopoutService && PopoutService.colorPickerModal) {
+								PopoutService.colorPickerModal.onColorSelectedCallback = function(selectedColor) {
+									Hue.notification("aa")
+								}
+								PopoutService.colorPickerModal.show()
+							}
+						}
+					}
+				}	
                 DankSlider {
                     id: lightSlider
                     Layout.fillWidth: true
@@ -481,6 +513,31 @@ PluginComponent {
         }
     }
 
+	component ClickableIcon: StyledRect {
+		required property string iconName
+		property int size: Theme.iconSize
+		property string selectedColor: Theme.surfaceContainerHighest
+		width: 20
+		height: this.width
+        color: iconArea.containsMouse ? selectedColor : "transparent"
+        radius: Theme.cornerRadius
+
+		signal clicked(var mouseEvent)
+
+		DankIcon {
+			anchors.centerIn: parent
+			name: parent.iconName
+			size: parent.size
+		}
+
+        MouseArea {
+            id: iconArea
+            anchors.fill: parent
+            hoverEnabled: true
+            cursorShape: Qt.PointingHandCursor
+			onClicked: (e) => parent.clicked(e)
+        }
+	}
 
 	component RoomColorTemperatureView: StyledRect {
         id: roomColorTemperatureViewRect
