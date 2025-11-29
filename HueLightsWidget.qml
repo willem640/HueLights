@@ -149,19 +149,23 @@ PluginComponent {
 			roomIndex: roomView.roomIndex
 			isRoom: true
 			labelFontSize: Theme.fontSizeLarge
+			visible: roomView.room.setBrightness !== undefined || roomView.room.turnOnOff !== undefined
 		}
 
         LightsView {
             room: roomView.room
             roomIndex: roomView.roomIndex
+			visible: roomView.room.lights !== undefined
         }
 
         SceneView {
 			room: roomView.room
+			visible: roomView.room.scenes !== undefined
 		}
 
 		RoomColorTemperatureView {
 			room: roomView.room
+			visible: roomView.room.colorTemperature !== undefined || roomView.room.setColorTemperature !== undefined
 		}
     }
 
@@ -352,11 +356,12 @@ PluginComponent {
                     id: sceneListColumnLayout
                     Layout.bottomMargin: Theme.spacingS
                     Repeater {
-                        model: room.scenes.map(scene => {
+						model: room.scenes !== undefined && room.scenes.length > 0 
+						? room.scenes.map(scene => {
                             return {
                                 scene: scene
                             };
-                        })
+                        }) : []
                         delegate: SceneViewSingle {
                             Layout.leftMargin: Theme.spacingS
                             Layout.rightMargin: Theme.spacingS
@@ -443,25 +448,27 @@ PluginComponent {
 						size: Theme.iconSize - 8
 						radius: 0
 						color: "transparent"
-						selectedColor: Theme.surfaceContainerHighest * 1.1 
 						Layout.fillHeight: true
 						Layout.preferredWidth: height
+						visible: lightOrRoom.colorTemperature !== undefined || lightOrRoom.setColorTemperature !== undefined
 					}
 					ClickableIcon {
+						id: colorIcon
 						Layout.topMargin: Theme.spacingM
 						iconName: "palette"
 						size: Theme.iconSize - 8
 						radius: 0
 						color: "transparent"
-						selectedColor: Theme.surfaceContainerHighest * 1.1 
 						Layout.fillHeight: true
 						Layout.preferredWidth: height
+						visible: lightOrRoom.color !== undefined || lightOrRoom.setColor !== undefined
 						onClicked: {
 							if (PopoutService && PopoutService.colorPickerModal) {
+								PopoutService.colorPickerModal.currentColor = this.lightOrRoom.color;
 								PopoutService.colorPickerModal.onColorSelectedCallback = function(selectedColor) {
-									Hue.notification("aa")
+									this.lightOrRoom.setColor(selectedColor);
 								}
-								PopoutService.colorPickerModal.show()
+								PopoutService.colorPickerModal.show();
 							}
 						}
 					}
@@ -471,6 +478,7 @@ PluginComponent {
                     Layout.fillWidth: true
                     Layout.bottomMargin: Theme.spacingXS
                     Layout.fillHeight: true
+					visible: lightOrRoom.brightness !== undefined && lightOrRoom.setBrightness !== undefined
                     minimum: 1
                     maximum: 100
                     value: lightOrRoom.brightness
@@ -495,6 +503,7 @@ PluginComponent {
 
                 DankToggle {
                     id: lightToggle
+					visible: lightOrRoom.on !== undefined && lightOrRoom.turnOnOff !== undefined
                     anchors.centerIn: parent
                     //width: parent.width * 0.3
                     checked: lightOrRoom.on
@@ -525,6 +534,7 @@ PluginComponent {
 		signal clicked(var mouseEvent)
 
 		DankIcon {
+			id: clickableIconDankIcon
 			anchors.centerIn: parent
 			name: parent.iconName
 			size: parent.size
@@ -532,7 +542,7 @@ PluginComponent {
 
         MouseArea {
             id: iconArea
-            anchors.fill: parent
+            anchors.fill: clickableIconDankIcon
             hoverEnabled: true
             cursorShape: Qt.PointingHandCursor
 			onClicked: (e) => parent.clicked(e)
