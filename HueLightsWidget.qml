@@ -6,11 +6,10 @@ import qs.Common
 import qs.Services
 import qs.Widgets
 import qs.Modules.Plugins
-import "Hue.js" as Hue
+import "Hue-fake.js" as Hue
 
 // TODO: 
 // actual hue integration,
-// icons
 // per-room open tab tracking?
 // buggy behavior of list view when closing the lights tab when it is out of view
 // add screenshots to readme
@@ -18,10 +17,11 @@ import "Hue.js" as Hue
 // remove empty rooms?
 // Fix crash on empty room
 // Color picker for RGB lights
-// Timer for data refresh
-// room brightness is not saved until refresh
-// sort scenes
 // per light temp/color?
+// refresh on light brighness set
+// data is refreshed when opening color temp?
+// some error messages?
+// light off icon?
 
 PluginComponent {
     id: root
