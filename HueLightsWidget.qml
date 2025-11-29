@@ -16,8 +16,7 @@ import "Hue-fake.js" as Hue
 // optional scene/color temp view?
 // remove empty rooms?
 // Fix crash on empty room
-// Color picker for RGB lights
-// per light temp/color?
+// per-light color temperature
 // refresh on light brighness set
 // data is refreshed when opening color temp?
 // some error messages?
@@ -281,7 +280,7 @@ PluginComponent {
                     id: lightsViewHeader
                     iconName: room.iconName
                     text: room.name + " lights"
-					onClicked: {
+					onClicked: () => {
 						if (lightsViewOpenableDropdown.isOpened) {
 							root.currentlyOpenDropdown = undefined
 						} else {
@@ -462,11 +461,15 @@ PluginComponent {
 						Layout.fillHeight: true
 						Layout.preferredWidth: height
 						visible: lightOrRoom.color !== undefined || lightOrRoom.setColor !== undefined
+
 						onClicked: {
 							if (PopoutService && PopoutService.colorPickerModal) {
-								PopoutService.colorPickerModal.currentColor = this.lightOrRoom.color;
-								PopoutService.colorPickerModal.onColorSelectedCallback = function(selectedColor) {
-									this.lightOrRoom.setColor(selectedColor);
+								const lightOrRoom = lightSliderWithSwitchRect.lightOrRoom
+								PopoutService.colorPickerModal.selectedColor = lightOrRoom.color;
+								PopoutService.colorPickerModal.pickerTitle = "Pick a color for " + lightOrRoom.name
+
+								PopoutService.colorPickerModal.onColorSelectedCallback = (selectedColor) => {
+									lightOrRoom.setColor(selectedColor);
 								}
 								PopoutService.colorPickerModal.show();
 							}
