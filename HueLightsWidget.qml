@@ -480,10 +480,11 @@ PluginComponent {
                     Layout.fillWidth: true
                     Layout.bottomMargin: Theme.spacingXS
                     Layout.fillHeight: true
-					visible: lightOrRoom.brightness !== undefined && lightOrRoom.setBrightness !== undefined
+					visible: lightOrRoom.brightness !== undefined || lightOrRoom.setBrightness !== undefined
+					enabled: lightOrRoom.setBrightness !== undefined
                     minimum: 1
                     maximum: 100
-                    value: lightOrRoom.brightness
+                    value: lightOrRoom.brightness ?? 0
                     wheelEnabled: false // doesn't work with onSliderDragFinished
                     onSliderDragFinished: finalValue => {
                         lightOrRoom.setBrightness(finalValue);
@@ -505,10 +506,11 @@ PluginComponent {
 
                 DankToggle {
                     id: lightToggle
-					visible: lightOrRoom.on !== undefined && lightOrRoom.turnOnOff !== undefined
+					visible: lightOrRoom.on !== undefined || lightOrRoom.turnOnOff !== undefined
+					enabled: lightOrRoom.turnOnOff !== undefined
                     anchors.centerIn: parent
                     //width: parent.width * 0.3
-                    checked: lightOrRoom.on
+                    checked: lightOrRoom.on ?? false
                     onToggleCompleted: state => {
                         lightOrRoom.turnOnOff(state);
 						if (roomIndex !== undefined && lightIndex !== undefined) {
@@ -579,7 +581,6 @@ PluginComponent {
 							root.currentlyOpenDropdown = room.id + "-roomColorTemperatureViewOpenableDropdown"
 						}
 
-						root.delayedUpdate()
 					}
                     Layout.fillWidth: true
                     Layout.topMargin: Theme.spacingS
@@ -624,6 +625,7 @@ PluginComponent {
 								percentAdjusted = 1
 							}
 							room.setColorTemperature(1 - percentAdjusted)
+							root.delayedUpdate()
 						}
 					}
 				}
