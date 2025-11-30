@@ -30,7 +30,11 @@ getYourIntegrationData(pluginData, completionHandler) {
 
 The rooms should be conform to the following schema. They may have extra properties, like the guid that's used to control the lights and scenes in the Philips Hue integration. If the integration works purely by light names, you might need to track the owning room's name in each light and scene.
 
-If a room or light does not support color, color temperature, etc., simply leave the property and/or setter undefined
+If a room or light does not support color, color temperature, etc., simply leave the property and/or setter undefined. The rooms and lights will need to have at least:
+- a name
+- an id
+- an icon.
+The rest is purely optional. The UI will show, hide or disable the relevant toggle or slider depending on what you provide.
 ```js
 const yourRooms = [
     {
