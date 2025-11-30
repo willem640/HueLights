@@ -21,6 +21,9 @@ import "Hue-fake.js" as Hue
 // data is refreshed when opening color temp?
 // some error messages?
 // light off icon?
+// I18n.tr()
+// maybe something better for read-only color? Is this even necessary?
+// clear rooms when sources are changed
 
 PluginComponent {
     id: root
@@ -465,10 +468,13 @@ PluginComponent {
 							if (PopoutService && PopoutService.colorPickerModal) {
 								const lightOrRoom = lightSliderWithSwitchRect.lightOrRoom
 								PopoutService.colorPickerModal.selectedColor = lightOrRoom.color;
-								PopoutService.colorPickerModal.pickerTitle = "Pick a color for " + lightOrRoom.name
-
-								PopoutService.colorPickerModal.onColorSelectedCallback = (selectedColor) => {
-									lightOrRoom.setColor(selectedColor);
+								if (lightOrRoom.setColor !== undefined) {
+									PopoutService.colorPickerModal.pickerTitle = "Pick a color for " + lightOrRoom.name;
+									PopoutService.colorPickerModal.onColorSelectedCallback = (selectedColor) => {
+										lightOrRoom.setColor(selectedColor);
+									}
+								} else {
+									PopoutService.colorPickerModal.pickerTitle = "View color of " + lightOrRoom.name + " (read only)";
 								}
 								PopoutService.colorPickerModal.show();
 							}
