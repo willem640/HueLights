@@ -80,7 +80,6 @@ PluginComponent {
     }
 
 	function delayedUpdate() {
-		//Quickshell.execDetached(["sh", "-c", "notify-send 'kaas'"]);
 		refreshTimer.restart()
 
 	}
@@ -116,7 +115,7 @@ PluginComponent {
                 DankListView {
                     id: roomsListView
                     width: parent.width
-                    height: 400
+					height: contentHeight < 1000 ? contentHeight : 1000
 					spacing: Theme.spacingL
 					clip: true
                     model: globalRooms.value.map(thisRoom => {
@@ -131,8 +130,8 @@ PluginComponent {
 					}
                 }
             }
-        }
-    }
+		}
+	}
 
     property int lightSliderHeight: 60
 
