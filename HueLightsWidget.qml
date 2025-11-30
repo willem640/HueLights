@@ -204,7 +204,7 @@ PluginComponent {
                     target: openableDropdown
                     property: "height"
                     duration: 200
-                    easing.type: Easing.InQuad
+                    easing.type: Easing.InOutQuad
                 }
             },
             Transition {
@@ -214,7 +214,7 @@ PluginComponent {
                     target: openableDropdown
                     property: "height"
                     duration: 200
-                    easing.type: Easing.OutQuad
+                    easing.type: Easing.InOutQuad
                 }
             }
         ]
